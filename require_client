@@ -112,7 +112,7 @@ if (validArgs) {
         fs.readFileSync(
           require_build, "utf-8"
         )
-        .replace(/(strict:.*?,path:('|").*?\2)}\);$/, "\n$1\n});")
+        .replace(/(strict:.*?)(,path:('|").*?\3)}\);$/, "\n$1\n});")
         .replace(/\{production:1\}/, JSON.stringify(
           modules, null, " "
         )), "utf-8"

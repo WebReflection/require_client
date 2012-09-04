@@ -67,4 +67,4 @@ var require = function (global, Function, config) {
 
   return require;
 
-}(this, Function, {strict:!0, path:"js/"});
+}(this, Function, {strict:true, path:"js/"});
