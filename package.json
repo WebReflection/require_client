@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "name": "require_client",
+  "description": "a meaningful node require for JS client side",
+  "homepage": "https://github.com/WebReflection/require_client",
+  "main": "./require_client",
+  "keywords": ["node", "require", "client", "web", "build"],
+  "author": {
+    "name": "Andrea Giammarchi",
+    "web": "http://webreflection.blogspot.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WebReflection/require_client.git"
+  },
+  "bin": {
+    "require_client": "./require_client"
+  }
+}

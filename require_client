@@ -1,0 +1,159 @@
+#!/usr/bin/env node
+
+/*! (C) Andrea Giammarchi */
+
+function Queue(args, f) {
+  // http://webreflection.blogspot.ie/2012/03/tweet-sized-queue-system.html
+  setTimeout(args.next = function next() {
+    return (f = args.shift()) ? !!f(args) || !0 : !1;
+  }, 0);
+  return args;
+}
+
+function cleanPath(fileName) {
+  return fileName.slice(config.path.length).replace(reJSend, "");
+}
+
+function compile(regular, compressed, onclose) {
+  spawn(
+    "java", [
+      "-jar",
+      yuicompressor,
+      regular,
+      "-o",
+      compressed
+    ], { stdio: 'inherit' }
+  ).on("close", onclose);
+}
+
+function readableSize(bytes) {
+  var i = 2, size;
+  while (1024 <= bytes && i--) {
+    bytes /= 1024;
+  }
+  switch (i) {
+    case 2: size = "bytes"; break;
+    case 1: size = "KB"; break;
+    case 0: size = "MB"; break;
+  }
+  return (i === 2 ? bytes : bytes.toFixed(2)) + " " + size;
+}
+
+function resolveArguments(args, keepProgramName) {
+  var a = [].slice.call(args, 0);
+  if (/(?:^|\/|\\)node(?:\.exe)?$/.test(a[0])) a.shift();
+  keepProgramName || a.shift();
+  return a;
+}
+
+var
+  args = resolveArguments(process.argv),
+  validArgs = !!args.length,
+  reJSend = /\.js$/,
+  path = require("path"),
+  fs = require("fs"),
+  zlib = require("zlib"),
+  spawn = require('child_process').spawn,
+  config = {path:path.join(args.shift(), "./")},
+  require_src = fs.readFileSync(
+    path.join(__dirname, "src", "require.js"),
+    "utf-8"
+  ).replace(/\/\/:dev([^\1]*)(\/\/dev:)/g, ""),
+  grab = Function("config",
+    "return " + RegExp.$1.replace(/^[^\1]*(function grab\()/, "$1")
+  )(config),
+  tmp_file = path.join(__dirname, "build", "tmp"),
+  tmp_uid = 0,
+  tmp_parsed = 0,
+  require_parsed = path.join(__dirname, "build", "require_parsed.js"),
+  require_build = path.join(__dirname, "build", "require.js"),
+  yuicompressor = path.join(__dirname, "jar", "yuicompressor-2.4.6.jar"),
+  modules = {}
+;
+
+if (validArgs) {
+
+  fs.writeFileSync(require_parsed, require_src, "utf-8");
+
+  Queue([
+    function (q) {
+      compile(require_parsed, require_build, q.next);
+    },
+    function readDir(q, dir) {
+      // per each found file, check for require() dependencise and create a list
+      // of files with keys/values pairs
+      // when a file is not found, discard it
+      // the path should start from the config.path
+      // so add the path runtime ? or resolve through the root folder
+      // in few words, cycles should simply work as it is
+      fs.readdirSync(dir || (dir = config.path)).forEach(function (fileName) {
+        fileName = path.join(dir, fileName);
+        if (reJSend.test(fileName)) {
+          var tmp_name = tmp_file + tmp_uid++ + ".js";
+          tmp_parsed++;
+          console.log("compiling module " + cleanPath(fileName));
+          compile(fileName, tmp_name, function () {
+            modules[cleanPath(
+              fileName
+            )] = fs.readFileSync(tmp_name, "utf-8");
+            fs.unlinkSync(tmp_name);
+            --tmp_parsed || q.next();
+          });
+        } else if(fs.statSync(fileName).isDirectory()) {
+          readDir(q, fileName);
+        }
+      });
+      tmp_parsed || q.next();
+    },
+    function (q) {
+      fs.unlinkSync(require_parsed);
+      fs.writeFileSync(
+        require_build,
+        fs.readFileSync(
+          require_build, "utf-8"
+        )
+        .replace(/(strict:.*?,path:('|").*?\2)}\);$/, "\n$1\n});")
+        .replace(/\{production:1\}/, JSON.stringify(
+          modules, null, " "
+        )), "utf-8"
+      );
+      console.log(readableSize(
+        fs.statSync(require_build).size
+      ));
+      fs
+        .createReadStream(require_build)
+        .pipe(
+          zlib.createGzip({
+            level: zlib.Z_BEST_COMPRESSION
+          })
+        )
+        .pipe(
+          fs.createWriteStream(require_build + ".gz")
+        )
+        .on("close", function () {
+          console.log(readableSize(
+            fs.statSync(require_build + ".gz").size
+          ) + " gzipped");
+          fs.unlinkSync(require_build + ".gz");
+          if (args.length) {
+            fs.writeFileSync(
+              args.shift(),
+              fs.readFileSync(require_build, "utf-8"),
+              "utf-8"
+            );
+            fs.unlinkSync(require_build);
+          }
+        })
+      ;
+    }
+  ]);
+
+} else {
+  console.log("");
+  console.log("Usage:");
+  console.log("  node require_client JS/source/folder [destination_file]");
+  console.log("");
+  console.log("if destination_file is not specified, built will be in");
+  console.log(require_build);
+  console.log("");
+}
