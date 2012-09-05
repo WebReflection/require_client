@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1",
+  "version": "0.0.2",
   "name": "require_client",
   "description": "a meaningful node require for JS client side",
   "homepage": "https://github.com/WebReflection/require_client",
@@ -15,5 +15,9 @@
   },
   "bin": {
     "require_client": "./require_client"
-  }
+  },
+  "licenses": [{
+    "type": "MIT",
+    "url": "http://lodash.com/license"
+  }]
 }

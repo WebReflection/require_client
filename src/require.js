@@ -59,12 +59,22 @@ var require = function (global, Function, config) {
     TRUE = !0,
     cache = {},
     hasOP = cache.hasOwnProperty,
-    modules = {production:1};
+    modules = {production:1},
+    noConflicts = global.require
   ;
+
+  require._ = function _(enrich) {
+    for(var key in enrich) {
+      hasOP.call(enrich, key) && (
+        modules[key] = enrich[key]
+      );
+    }
+    return require;
+  };
 
   require.config = config;
   require.main = global;
 
-  return require;
+  return noConflicts ? noConflicts._(modules) : require;
 
 }(this, Function, {strict:true, path:"js/"});
