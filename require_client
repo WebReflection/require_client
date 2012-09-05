@@ -80,14 +80,10 @@ if (validArgs) {
       compile(require_parsed, require_build, q.next);
     },
     function readDir(q, dir) {
-      // per each found file, check for require() dependencise and create a list
-      // of files with keys/values pairs
-      // when a file is not found, discard it
-      // the path should start from the config.path
-      // so add the path runtime ? or resolve through the root folder
-      // in few words, cycles should simply work as it is
       fs.readdirSync(dir || (dir = config.path)).forEach(function (fileName) {
         fileName = path.join(dir, fileName);
+        // avoid the inclusion of require itself as a module
+        if (/(?:^|\\|\/)require\.js/.test(fileName)) return;
         if (reJSend.test(fileName)) {
           var tmp_name = tmp_file + tmp_uid++ + ".js";
           tmp_parsed++;
