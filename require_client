@@ -74,8 +74,8 @@ var
   watchInterval = 0,
   buildNO = 1,
   watchList = [],
-  compile = useUYI ?
-  function compile(regular, compressed, onclose) {
+  $compile = useUYI ?
+  function $compile(regular, compressed, onclose) {
       spawn(
         "java", [
           "-jar",
@@ -86,7 +86,7 @@ var
         ], { stdio: 'inherit' }
       ).on("close", onclose);
     } :
-    function compile(regular, compressed, onclose) {
+    function $compile(regular, compressed, onclose) {
       var
         jsp = require("uglify-js").parser,
         pro = require("uglify-js").uglify,
@@ -96,6 +96,13 @@ var
       ast = pro.ast_squeeze(ast);
       fs.writeFileSync(compressed, pro.gen_code(ast), "utf-8");
       process.nextTick(onclose);
+    },
+    compile = function (regular, compressed, onclose) {
+      try {
+        $compile(regular, compressed, onclose);
+      } catch(e) {
+        onclose(e);
+      }
     }
 ;
 
@@ -124,11 +131,19 @@ if (validArgs) {
             useWatch && fs.watch(fileName, {persistent:true}, watch);
           }
           console.log("compiling module " + cleanPath(fileName));
-          compile(fileName, tmp_name, function () {
-            modules[cleanPath(
-              fileName
-            )] = fs.readFileSync(tmp_name, "utf-8");
-            fs.unlinkSync(tmp_name);
+          compile(fileName, tmp_name, function (e) {
+            if (fs.existsSync(tmp_name)) {
+              modules[cleanPath(
+                fileName
+              )] = fs.readFileSync(tmp_name, "utf-8");
+              fs.unlinkSync(tmp_name);
+            } else {
+              console.log("[FAIL] unable to compile " + fileName);
+              if (e) {
+                console.log(e.message);
+                console.log("");
+              }
+            }
             --tmp_parsed || q.next();
           });
         } else if(fs.statSync(fileName).isDirectory()) {
