@@ -74,8 +74,22 @@ var
   watchInterval = 0,
   buildNO = 1,
   watchList = [],
+  preCode = /^this\.exports=function\(\)\{/,
+  postCode = /\}\.call\(this\);?$/,
+  wrapCode = function (code) {
+    return "this.exports=function(){"+code+"}.call(this);";
+  },
+  unwrapCode = function (code) {
+    return code.replace(preCode, "").replace(postCode, "");
+  },
   $compile = useUYI ?
   function $compile(regular, compressed, onclose) {
+      if (regular !== require_parsed) {
+        regular += ".___.js";
+        fs.writeFileSync(
+          regular, wrapCode(fs.readFileSync(regular, "utf-8")), "utf-8"
+        );
+      }
       spawn(
         "java", [
           "-jar",
@@ -84,13 +98,19 @@ var
           "-o",
           compressed
         ], { stdio: 'inherit' }
-      ).on("close", onclose);
+      ).on("close", function () {
+        if (regular !== require_parsed) {
+          fs.unlinkSync(regular);
+        }
+        onclose();
+      });
     } :
     function $compile(regular, compressed, onclose) {
       var
         jsp = require("uglify-js").parser,
         pro = require("uglify-js").uglify,
-        ast = jsp.parse(fs.readFileSync(regular, "utf-8"))
+        content = fs.readFileSync(regular, "utf-8"),
+        ast = jsp.parse(regular === require_parsed ? content : wrapCode(content))
       ;
       ast = pro.ast_mangle(ast);
       ast = pro.ast_squeeze(ast);
@@ -135,7 +155,7 @@ if (validArgs) {
             if (fs.existsSync(tmp_name)) {
               modules[cleanPath(
                 fileName
-              )] = fs.readFileSync(tmp_name, "utf-8");
+              )] = unwrapCode(fs.readFileSync(tmp_name, "utf-8"));
               fs.unlinkSync(tmp_name);
             } else {
               console.log("[FAIL] unable to compile " + fileName);
