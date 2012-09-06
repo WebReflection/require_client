@@ -1,8 +1,7 @@
-/*! (C) Andrea Giammarchi */
-var require=function(c,d,e){function n(p,o){return o?p:h[p]}function b(q){var o=a[q]={},p={id:q,parent:c,filename:n(q,i),web:i};p[l]=o;d("global","module",l,(e.strict?"'use strict';":"")+n(q)).call(o,c,p,o);k.call(o=p[l],j)||(o[j]=i);return o}function g(o){return k.call(a,o)?a[o]:a[o]=b(o)}var l="exports",j="loaded",i=!0,a={},k=a.hasOwnProperty,h={
- "a": "console.log(\"a starting\");exports.done=false;var b=require(\"b\");console.log(\"in a, b.done = \"+b.done);exports.done=true;console.log(\"a done\");",
- "main": "console.log(\"main starting\");var a=require(\"a\");var b=require(\"b\");console.log(\"in main, a.done=\"+a.done+\", b.done=\"+b.done);",
- "b": "console.log(\"b starting\");exports.done=false;var a=require(\"a\");console.log(\"in b, a.done = \"+a.done);exports.done=true;console.log(\"b done\");"
-},f=c.require;g._=function m(o){for(var p in o){k.call(o,p)&&(h[p]=o[p])}return g};g.config=e;g.main=c;return f?f._(h):g}(this,Function,{
-strict:true
-});
+var require=function(e,t,n){function r(e,t){return t?e:c[e]}function i(i){var s=f[i]={},c={id:i,parent:e,filename:r(i,a),web:a};return c[o]=s,t("global","module",o,(n.strict?"'use strict';":"")+r(i)).call(s,e,c,s),l.call(s=c[o],u)||(s[u]=a),s}function s(e){return l.call(f,e)?f[e]:f[e]=i(e)}var o="exports",u="loaded",a=!0,f={},l=f.hasOwnProperty,c={
+ "a": "require(\"c\").test()",
+ "b": "require(\"a\"),require(\"c\"),exports.test=require(\"d\").test",
+ "c": "module.exports.test=require(\"b\").test",
+ "d": "this.test=require(\"e\")",
+ "e": "require(\"a\"),require(\"b\"),require(\"c\"),require(\"d\"),module.exports=function(){alert(global)}"
+},h=e.require;return s._=function(t){for(var n in t)l.call(t,n)&&(c[n]=t[n]);return s},s.config=n,s.main=e,h?h._(c):s}(this,Function,{strict:!0,path:"js/"})

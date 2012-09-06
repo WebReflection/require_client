@@ -14,18 +14,6 @@ function cleanPath(fileName) {
   return fileName.slice(config.path.length).replace(reJSend, "");
 }
 
-function compile(regular, compressed, onclose) {
-  spawn(
-    "java", [
-      "-jar",
-      yuicompressor,
-      regular,
-      "-o",
-      compressed
-    ], { stdio: 'inherit' }
-  ).on("close", onclose);
-}
-
 function readableSize(bytes) {
   var i = 2, size;
   while (1024 <= bytes && i--) {
@@ -46,10 +34,23 @@ function resolveArguments(args, keepProgramName) {
   return a;
 }
 
+function watch() {
+  clearTimeout(watchInterval);
+  watchInterval = setTimeout(function () {
+    watchInterval = 0;
+    Queue(program.slice());
+  }, 1000);
+}
+
 var
   args = resolveArguments(process.argv),
+  withYUI = args.indexOf("--yui"),
+  useUYI = withYUI < 0 ? false : !!args.splice(withYUI, 1),
+  withWatch = args.indexOf("--watch"),
+  useWatch = withWatch < 0 ? false : !!args.splice(withWatch, 1),
   validArgs = !!args.length,
   reJSend = /\.js$/,
+  reIsRequire = /(?:^|\\|\/)require\.js$/,
   path = require("path"),
   fs = require("fs"),
   zlib = require("zlib"),
@@ -68,25 +69,60 @@ var
   require_parsed = path.join(__dirname, "build", "require_parsed.js"),
   require_build = path.join(__dirname, "build", "require.js"),
   yuicompressor = path.join(__dirname, "jar", "yuicompressor-2.4.6.jar"),
-  modules = {}
+  modules = {},
+  program = [],
+  watchInterval = 0,
+  buildNO = 1,
+  watchList = [],
+  compile = useUYI ?
+  function compile(regular, compressed, onclose) {
+      spawn(
+        "java", [
+          "-jar",
+          yuicompressor,
+          regular,
+          "-o",
+          compressed
+        ], { stdio: 'inherit' }
+      ).on("close", onclose);
+    } :
+    function compile(regular, compressed, onclose) {
+      var
+        jsp = require("uglify-js").parser,
+        pro = require("uglify-js").uglify,
+        ast = jsp.parse(fs.readFileSync(regular, "utf-8"))
+      ;
+      ast = pro.ast_mangle(ast);
+      ast = pro.ast_squeeze(ast);
+      fs.writeFileSync(compressed, pro.gen_code(ast), "utf-8");
+      process.nextTick(onclose);
+    }
 ;
 
 if (validArgs) {
 
-  fs.writeFileSync(require_parsed, require_src, "utf-8");
-
-  Queue([
+  program = Queue([
     function (q) {
+      console.log("");
+      console.log("[require_client] build #" + buildNO++);
+      fs.writeFileSync(require_parsed, require_src, "utf-8");
+      q.next();
+    },
+    function first(q) {
       compile(require_parsed, require_build, q.next);
     },
     function readDir(q, dir) {
       fs.readdirSync(dir || (dir = config.path)).forEach(function (fileName) {
         fileName = path.join(dir, fileName);
         // avoid the inclusion of require itself as a module
-        if (/(?:^|\\|\/)require\.js/.test(fileName)) return;
+        if (reIsRequire.test(fileName)) return;
         if (reJSend.test(fileName)) {
           var tmp_name = tmp_file + tmp_uid++ + ".js";
           tmp_parsed++;
+          if (watchList.indexOf(fileName) < 0) {
+            watchList.push(fileName);
+            useWatch && fs.watch(fileName, {persistent:true}, watch);
+          }
           console.log("compiling module " + cleanPath(fileName));
           compile(fileName, tmp_name, function () {
             modules[cleanPath(
@@ -139,17 +175,28 @@ if (validArgs) {
             );
             fs.unlinkSync(require_build);
           }
+          q.next();
         })
       ;
+    },
+    function () {
+      if (useWatch) {
+        useWatch = false;
+        console.log("");
+        console.log("watching " + config.path + " like a boss");
+        console.log("");
+        fs.watch(config.path, {persistent:true}, watch);
+      }
     }
-  ]);
+  ]).slice();
 
 } else {
   console.log("");
   console.log("Usage:");
-  console.log("  node require_client JS/source/folder [destination_file]");
+  console.log("  node require_client JS/source/folder [destination_file] [--yui]");
   console.log("");
   console.log("if destination_file is not specified, built will be in");
+  console.log("if --yui is not present, UglifyJS will be used as default");
   console.log(require_build);
   console.log("");
 }
