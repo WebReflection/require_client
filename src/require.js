@@ -1,4 +1,4 @@
-/*! (C) Andrea Giammarchi */
+/*! (C) Andrea Giammarchi - Mit Style License */
 
 var require = function (global, Function, config) {
 
@@ -78,3 +78,9 @@ var require = function (global, Function, config) {
   return noConflicts ? noConflicts._(modules) : require;
 
 }(this, Function, {strict:true, path:"js/"});
+
+!function(script, className, i){
+  for(i = 0; i < script.length; i++)
+    (script[i][className] == "exec") && Function(script[i].innerHTML)(script[i][className] == "")
+  ;
+}(document.getElementsByTagName("script"), "className");

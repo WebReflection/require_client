@@ -83,12 +83,14 @@ var
     return code.replace(preCode, "").replace(postCode, "");
   },
   $compile = useUYI ?
-  function $compile(regular, compressed, onclose) {
+    function $compile(regular, compressed, onclose) {
       if (regular !== require_parsed) {
-        regular += ".___.js";
         fs.writeFileSync(
-          regular, wrapCode(fs.readFileSync(regular, "utf-8")), "utf-8"
+          regular + ".___.js", wrapCode(
+            fs.readFileSync(regular, "utf-8")
+          ), "utf-8"
         );
+        regular += ".___.js";
       }
       spawn(
         "java", [
@@ -179,7 +181,7 @@ if (validArgs) {
         fs.readFileSync(
           require_build, "utf-8"
         )
-        .replace(/(strict:.*?)(,path:('|").*?\3)}\);$/, "\n$1\n});")
+        .replace(/(strict:.*?)(,path:('|").*?\3)}\);?$/, "\n$1\n});")
         .replace(/\{production:1\}/, JSON.stringify(
           modules, null, " "
         )), "utf-8"
