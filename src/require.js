@@ -80,7 +80,7 @@ var require = function (global, Function, config) {
 }(this, Function, {strict:true, path:"js/"});
 
 !function(script, className, i){
-  for(i = 0; i < script.length; i++)
+  for(; i < script.length; i++)
     (script[i][className] == "exec") && Function(script[i].innerHTML)(script[i][className] == "")
   ;
-}(document.getElementsByTagName("script"), "className");
+}(document.getElementsByTagName("script"), "className", 0);

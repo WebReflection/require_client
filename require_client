@@ -181,7 +181,7 @@ if (validArgs) {
         fs.readFileSync(
           require_build, "utf-8"
         )
-        .replace(/(strict:.*?)(,path:('|").*?\3)}\);?$/, "\n$1\n});")
+        .replace(/(strict:[^,]+?,)(path:('|")[^\3]*?\3)/, "\n$1\n$2\n")
         .replace(/\{production:1\}/, JSON.stringify(
           modules, null, " "
         )), "utf-8"
@@ -204,7 +204,7 @@ if (validArgs) {
             fs.statSync(require_build + ".gz").size
           ) + " gzipped");
           fs.unlinkSync(require_build + ".gz");
-          if (args.length) {
+          if (args.length && path.resolve(args[0]) !== require_build) {
             fs.writeFileSync(
               args.shift(),
               fs.readFileSync(require_build, "utf-8"),
