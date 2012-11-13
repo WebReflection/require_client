@@ -45,7 +45,9 @@ function watch() {
 var
   args = resolveArguments(process.argv),
   withYUI = args.indexOf("--yui"),
+  noStrict = args.indexOf("--nostrict"),
   useUYI = withYUI < 0 ? false : !!args.splice(withYUI, 1),
+  useNoStrict = noStrict < 0 ? false : !!args.splice(noStrict, 1),
   withWatch = args.indexOf("--watch"),
   useWatch = withWatch < 0 ? false : !!args.splice(withWatch, 1),
   validArgs = !!args.length,
@@ -63,6 +65,8 @@ var
   grab = Function("config",
     "return " + RegExp.$1.replace(/^[^\1]*(function grab\()/, "$1")
   )(config),
+  build_folder = path.join(__dirname, "build"),
+  exist = fs.existsSync(build_folder) || fs.mkdirSync(build_folder),
   tmp_file = path.join(__dirname, "build", "tmp"),
   tmp_uid = 0,
   tmp_parsed = 0,
@@ -181,10 +185,12 @@ if (validArgs) {
         fs.readFileSync(
           require_build, "utf-8"
         )
-        .replace(/(strict:[^,]+?,)(path:('|")[^\3]*?\3)/, "\n$1\n$2\n")
+        .replace(/(strict:[^,]+?)(,path:('|")[^\3]*?\3)/, "\n" + (
+            useNoStrict ? "strict:false" : "$1"
+          ) + "\n")
         .replace(/\{production:1\}/, JSON.stringify(
           modules, null, " "
-        )), "utf-8"
+        )) + ";", "utf-8"
       );
       console.log(readableSize(
         fs.statSync(require_build).size
