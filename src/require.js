@@ -30,12 +30,12 @@ var require = function (global, Function, config) {
 
     module[EXPORTS] = exports;
     Function(
-      "global", "module", EXPORTS,
+      "global", EXPORTS, "module",
       (config.strict ?
         "'use strict';" : ""
-      ) + grab(path)
+      ) + DEFINE + grab(path)
     ).call(exports,
-      global, module, exports
+      global, exports, module
     );
 
     hasOP.call(
@@ -56,6 +56,7 @@ var require = function (global, Function, config) {
   var
     EXPORTS = "exports",
     LOADED = "loaded",
+    DEFINE = "function define(f){f(global.require," + EXPORTS + ",module)}\n",
     TRUE = !0,
     cache = {},
     hasOP = cache.hasOwnProperty,
@@ -77,7 +78,7 @@ var require = function (global, Function, config) {
 
   return noConflicts ? noConflicts._(modules) : require;
 
-}(this, Function, {strict:true, path:"js/"});
+}(window, Function, {strict:true, path:"js/"});
 
 !function(script, className, i){
   for(; i < script.length; i++)
